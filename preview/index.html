@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zibro Warenkorb v0.4.0 – Position 3 (Mobile & Desktop Live-Test)</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 56px 0 0 0;
+    background: #0f172a;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #f8fafc;
+    height: 100vh;
+    overflow: hidden;
+  }
+  #toolbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    background: #0f172a;
+    border-bottom: 1px solid #1e293b;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 100;
+    gap: 12px;
+  }
+  .tb-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+  .tb-badge {
+    background: #1e8e3e;
+    color: #fff;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+  }
+  .tb-btn {
+    background: #1e293b;
+    color: #cbd5e1;
+    border: 1px solid #334155;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12.5px;
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+  .tb-btn:hover {
+    background: #334155;
+    color: #fff;
+  }
+  .tb-btn.active {
+    background: #1e8e3e;
+    border-color: #22c55e;
+    color: #fff;
+  }
+  #stage {
+    width: 100%;
+    height: calc(100vh - 56px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    padding: 18px;
+    overflow: auto;
+  }
+  .device-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+  }
+  .device-label {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  /* True 390px Mobile Frame */
+  #mobile-wrap {
+    width: 390px;
+    flex-shrink: 0;
+  }
+  #mobile-iframe {
+    width: 390px;
+    height: calc(100vh - 110px);
+    max-height: 844px;
+    border: 0;
+    border-radius: 34px;
+    background: #fff;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.55), 0 0 0 10px #1e293b, 0 0 0 12px #334155;
+  }
+  /* Desktop Frame */
+  #desktop-wrap {
+    flex: 1;
+    height: 100%;
+    max-width: 1440px;
+  }
+  #desktop-iframe {
+    width: 100%;
+    height: calc(100vh - 110px);
+    border: 0;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.45), 0 0 0 1px #334155;
+  }
+  body[data-mode="mobile"] #desktop-wrap { display: none; }
+  body[data-mode="desktop"] #mobile-wrap { display: none; }
+  body[data-mode="desktop"] #stage { padding: 0; }
+  body[data-mode="desktop"] #desktop-wrap { max-width: 100%; }
+  body[data-mode="desktop"] #desktop-iframe { height: calc(100vh - 56px); border-radius: 0; }
+</style>
+</head>
+<body data-mode="split">
+  <div id="toolbar">
+    <div class="tb-group">
+      <span class="tb-badge">v0.4.0 · POSITION 3</span>
+      <strong style="font-size:13px;">Zibro Progressbar (Über Warenkorb-Tabelle · Gutschein: blackweek26)</strong>
+    </div>
+
+    <div class="tb-group">
+      <span style="color:#94a3b8;font-size:12px;">Warenkorbwert testen:</span>
+      <button class="tb-btn active" id="q-1" onclick="setQty(1)">1x (84,90 €)</button>
+      <button class="tb-btn" id="q-3" onclick="setQty(3)">3x (254,70 €)</button>
+      <button class="tb-btn" id="q-5" onclick="setQty(5)">5x (424,50 € → blackweek26 aktiv!)</button>
+    </div>
+
+    <div class="tb-group">
+      <span style="color:#94a3b8;font-size:12px;">Ansicht:</span>
+      <button class="tb-btn active" id="m-split" onclick="setMode('split')">📱+🖥 Mobile & Desktop</button>
+      <button class="tb-btn" id="m-mobile" onclick="setMode('mobile')">📱 Nur Mobile (390px)</button>
+      <button class="tb-btn" id="m-desktop" onclick="setMode('desktop')">🖥 Nur Desktop</button>
+    </div>
+  </div>
+
+  <div id="stage">
+    <div class="device-wrap" id="mobile-wrap">
+      <div class="device-label">📱 Mobile View (Echter 390px Viewport · Position 3)</div>
+      <iframe id="mobile-iframe" src="cart-frame.html"></iframe>
+    </div>
+    <div class="device-wrap" id="desktop-wrap">
+      <div class="device-label">🖥 Desktop View (Position 3 · Über Artikeltabelle)</div>
+      <iframe id="desktop-iframe" src="cart-frame.html"></iframe>
+    </div>
+  </div>
+
+  <script>
+    function setQty(q) {
+      [1, 3, 5].forEach(n => document.getElementById("q-" + n).classList.toggle("active", n === q));
+      const msg = { type: "ZIBRO_SET_QTY", qty: q };
+      document.getElementById("mobile-iframe").contentWindow.postMessage(msg, "*");
+      document.getElementById("desktop-iframe").contentWindow.postMessage(msg, "*");
+    }
+    function setMode(m) {
+      document.body.setAttribute("data-mode", m);
+      ["split", "mobile", "desktop"].forEach(k => document.getElementById("m-" + k).classList.toggle("active", k === m));
+    }
+  </script>
+</body>
+</html>
