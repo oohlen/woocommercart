@@ -2,6 +2,14 @@
 
 Alle Änderungen durch Prompts werden fortlaufend mit einer eindeutigen Unterversion dokumentiert.
 
+## [v0.5.1] – 2026-11-11
+### Hotfix (Fatal Error bei Plugin-Update / Aktivierung behoben)
+- **Kein Klassen-/Konstanten-Konflikt mehr bei Parallel-Upload (`Cannot redeclare class Zibro_Cart_Discount_Bar`)**:
+  - In den bisherigen Versionen war `class Zibro_Cart_Discount_Bar` und `define('ZIBRO_CDB_VERSION', ...)` ohne `class_exists()`/`defined()`-Schutz deklariert. Wenn in WordPress noch die Vorgängerversion aktiv war und ein neues ZIP parallel hochgeladen/aktiviert wurde, löste PHP wegen doppelter Klassendeklaration einen fatalen Fehler aus.
+  - Neue gekapselte Klasse `Zibro_Cart_Discount_Bar_Core` mit `if ( ! class_exists( ... ) )`-Guard.
+  - Automatische Bereinigung ([`Zibro_Cart_Discount_Bar_Core::cleanup_legacy_instance()`](file:///Users/oleohlen/zibro-warenkorb/zibro-cart-discount-bar.php#L67-L78) & [`Zibro_Cart_Discount_Bar_Core::deactivate_duplicate_older_plugins()`](file:///Users/oleohlen/zibro-warenkorb/zibro-cart-discount-bar.php#L83-L100)): Falls noch ein alter Plugin-Ordner in WordPress aktiv ist, werden dessen Hooks automatisch ausgehängt und das Duplikat im Admin deaktiviert.
+  - Alle strikten PHP-Typdeklarationen an WordPress-Filter-Callbacks entfernt, um maximale Kompatibilität mit Drittanbieter-Plugins sicherzustellen.
+
 ## [v0.5.0] – 2026-11-11
 ### Behoben & Hinzugefügt
 - **Automatische Hinterlegung des WooCommerce-Gutscheins `blackweek26` ab 400 € wieder aktiviert**:

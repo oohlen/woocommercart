@@ -1,10 +1,10 @@
-# Zibro Warenkorb Rabatt-Störer (Progress Bar) – `v0.5.0`
+# Zibro Warenkorb Rabatt-Störer (Progress Bar) – `v0.5.1`
 
 Minimalistisches WordPress / WooCommerce Plugin zur Anzeige eines verkaufsfördernden Fortschrittsbalkens (Progress Bar) im Stil von Shopify/Neosupps inkl. automatischer Hinterlegung des WooCommerce-Gutscheins **`blackweek26`** ab 400 € für **zibro-ofenshop.de** (PeakShops Theme).
 
-- **Aktuelle Version:** `v0.5.0` (siehe [`CHANGELOG.md`](./CHANGELOG.md))
+- **Aktuelle Version:** `v0.5.1` (siehe [`CHANGELOG.md`](./CHANGELOG.md))
 - **Hauptdatei:** [`zibro-cart-discount-bar.php`](./zibro-cart-discount-bar.php)
-- **Installationsfertiges ZIP-Paket:** [`zibro-cart-discount-bar-v0.5.0.zip`](./zibro-cart-discount-bar-v0.5.0.zip)
+- **Installationsfertiges ZIP-Paket:** [`zibro-cart-discount-bar.zip`](./zibro-cart-discount-bar.zip) (sowie [`zibro-cart-discount-bar-v0.5.1.zip`](./zibro-cart-discount-bar-v0.5.1.zip))
 
 ---
 
@@ -61,6 +61,7 @@ Im Ordner [`preview/`](./preview/) befindet sich eine interaktive Testumgebung b
 ## Versionshistorie
 
 Alle Änderungen werden fortlaufend mit eindeutiger Unterversion in der [`CHANGELOG.md`](./CHANGELOG.md) dokumentiert:
+- **`v0.5.1`** – Hotfix gegen Fatal Error (`Cannot redeclare class`) beim Darüber-Installieren/Aktivieren + Auto-Deaktivierung älterer Duplikate
 - **`v0.5.0`** – Automatische Hinterlegung & Entfernung des WooCommerce-Gutscheins `blackweek26` ab 400 € (inkl. AJAX-Mengenupdate-Support für `simple-cart-update.js`)
 - **`v0.4.2`** – Dokumentation (`README.md`) & GitHub-Repository-Release
 - **`v0.4.1`** – Installationsfertiges WordPress-ZIP-Paket
