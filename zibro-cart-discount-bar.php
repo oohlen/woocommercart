@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Zibro Warenkorb Rabatt-Störer (Progress Bar)
- * Description: Minimalistische Progressbar in Position 3 (direkt über der Warenkorb-Tabelle) zur Visualisierung des 10% Rabatts ab 400 € (Gutschein: blackweek26) – optimiert für Mobile & Desktop.
- * Version: 0.4.2
+ * Description: Minimalistische Progressbar in Position 3 (direkt über der Warenkorb-Tabelle) inkl. automatischer Einlösung des WooCommerce-Gutscheins blackweek26 ab 400 €.
+ * Version: 0.5.0
  * Author: Zibro Ofenshop
  * Text Domain: zibro-cart-discount-bar
  * Requires Plugins: woocommerce
@@ -12,9 +12,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'ZIBRO_CDB_VERSION', '0.4.2' );
+define( 'ZIBRO_CDB_VERSION', '0.5.0' );
 
 final class Zibro_Cart_Discount_Bar {
+
+	/**
+	 * Guard flag to prevent recursion when auto-applying/removing coupon.
+	 */
+	private static bool $syncing_coupon = false;
 
 	/**
 	 * Initialize hooks.
@@ -25,6 +30,13 @@ final class Zibro_Cart_Discount_Bar {
 		add_action( 'woocommerce_settings_tabs_zibro_discount_bar', [ __CLASS__, 'render_settings' ] );
 		add_action( 'woocommerce_update_options_zibro_discount_bar', [ __CLASS__, 'save_settings' ] );
 		add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), [ __CLASS__, 'plugin_action_links' ] );
+
+		// Auto-Apply / Auto-Remove WooCommerce Coupon (blackweek26) at >= 400 €
+		add_action( 'wp', [ __CLASS__, 'sync_auto_coupon_on_load' ], 20 );
+		add_action( 'woocommerce_before_calculate_totals', [ __CLASS__, 'sync_auto_coupon_before_totals' ], 10, 1 );
+		add_action( 'woocommerce_after_calculate_totals', [ __CLASS__, 'sync_auto_coupon' ], 20, 1 );
+		add_action( 'woocommerce_check_cart_items', [ __CLASS__, 'sync_auto_coupon_on_load' ], 5 );
+		add_filter( 'woocommerce_coupon_message', [ __CLASS__, 'suppress_auto_coupon_toast' ], 10, 3 );
 
 		// Frontend Placement & Styles (Position 3 Default)
 		add_action( 'wp', [ __CLASS__, 'register_placement_hooks' ] );
@@ -43,6 +55,7 @@ final class Zibro_Cart_Discount_Bar {
 			'threshold'     => (float) get_option( 'zibro_cdb_threshold', 400.0 ),
 			'discount_pct'  => (float) get_option( 'zibro_cdb_discount_pct', 10.0 ),
 			'coupon_code'   => trim( (string) get_option( 'zibro_cdb_coupon_code', 'blackweek26' ) ),
+			'auto_apply'    => get_option( 'zibro_cdb_auto_apply', 'yes' ) === 'yes',
 			'placement'     => get_option( 'zibro_cdb_placement', 'cart_column' ),
 			'show_minicart' => get_option( 'zibro_cdb_show_minicart', 'yes' ) === 'yes',
 			'bar_color'     => get_option( 'zibro_cdb_bar_color', '#1e8e3e' ),
@@ -55,6 +68,109 @@ final class Zibro_Cart_Discount_Bar {
 				'Glückwunsch! <strong>{discount}% Rabatt (-{saved})</strong> mit Gutschein <strong>{coupon}</strong> aktiv!'
 			),
 		];
+	}
+
+	/**
+	 * Trigger coupon sync on page load (e.g. when visiting /warenkorb/ or /kasse/ with existing cart).
+	 */
+	public static function sync_auto_coupon_on_load(): void {
+		if ( function_exists( 'WC' ) && WC()->cart ) {
+			self::sync_auto_coupon( WC()->cart );
+		}
+	}
+
+	/**
+	 * Pre-sync coupon before totals calculation using live product quantities (for AJAX quantity updates).
+	 */
+	public static function sync_auto_coupon_before_totals( $cart ): void {
+		if ( self::$syncing_coupon || ( is_admin() && ! defined( 'DOING_AJAX' ) ) ) {
+			return;
+		}
+		if ( ! ( $cart instanceof \WC_Cart ) || $cart->is_empty() ) {
+			return;
+		}
+		$cfg = self::get_config();
+		if ( ! $cfg['enabled'] || ! $cfg['auto_apply'] || '' === $cfg['coupon_code'] ) {
+			return;
+		}
+
+		$gross_subtotal = 0.0;
+		foreach ( $cart->get_cart() as $item ) {
+			if ( ! empty( $item['data'] ) && $item['data'] instanceof \WC_Product ) {
+				$qty             = (int) ( $item['quantity'] ?? 1 );
+				$gross_subtotal += (float) wc_get_price_including_tax( $item['data'], [ 'qty' => $qty ] );
+			}
+		}
+
+		$coupon_code = wc_format_coupon_code( $cfg['coupon_code'] );
+		$has_coupon  = $cart->has_discount( $coupon_code );
+
+		self::$syncing_coupon = true;
+		if ( $gross_subtotal >= $cfg['threshold'] && ! $has_coupon ) {
+			$cart->apply_coupon( $coupon_code );
+		} elseif ( $gross_subtotal < $cfg['threshold'] && $has_coupon ) {
+			$cart->remove_coupon( $coupon_code );
+		}
+		self::$syncing_coupon = false;
+	}
+
+	/**
+	 * Automatically apply `blackweek26` in WooCommerce when gross cart subtotal >= 400 €,
+	 * and remove it when gross cart subtotal drops below 400 €.
+	 */
+	public static function sync_auto_coupon( $cart ): void {
+		if ( self::$syncing_coupon ) {
+			return;
+		}
+		if ( is_admin() && ! defined( 'DOING_AJAX' ) ) {
+			return;
+		}
+		if ( ! ( $cart instanceof \WC_Cart ) ) {
+			if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+				return;
+			}
+			$cart = WC()->cart;
+		}
+		if ( $cart->is_empty() ) {
+			return;
+		}
+
+		$cfg = self::get_config();
+		if ( ! $cfg['enabled'] || ! $cfg['auto_apply'] || '' === $cfg['coupon_code'] ) {
+			return;
+		}
+
+		$coupon_code = wc_format_coupon_code( $cfg['coupon_code'] );
+		$subtotal    = (float) $cart->get_subtotal() + (float) $cart->get_subtotal_tax();
+
+		// Fallback calculation from line items if totals were not calculated yet
+		if ( $subtotal <= 0.0 ) {
+			foreach ( $cart->get_cart() as $item ) {
+				$subtotal += (float) ( $item['line_subtotal'] ?? 0.0 ) + (float) ( $item['line_subtotal_tax'] ?? 0.0 );
+			}
+		}
+
+		$has_coupon = $cart->has_discount( $coupon_code );
+
+		self::$syncing_coupon = true;
+		if ( $subtotal >= $cfg['threshold'] && ! $has_coupon ) {
+			$cart->apply_coupon( $coupon_code );
+			$cart->calculate_totals();
+		} elseif ( $subtotal < $cfg['threshold'] && $has_coupon ) {
+			$cart->remove_coupon( $coupon_code );
+			$cart->calculate_totals();
+		}
+		self::$syncing_coupon = false;
+	}
+
+	/**
+	 * Suppress duplicate WooCommerce toast message when coupon is auto-applied in the background.
+	 */
+	public static function suppress_auto_coupon_toast( string $msg, int $msg_code, $coupon ): string {
+		if ( self::$syncing_coupon ) {
+			return '';
+		}
+		return $msg;
 	}
 
 	/**
@@ -116,7 +232,7 @@ final class Zibro_Cart_Discount_Bar {
 	}
 
 	/**
-	 * Calculate current cart progress state (purely read-only).
+	 * Calculate current cart progress state.
 	 */
 	public static function get_cart_state(): array {
 		$cfg = self::get_config();
@@ -306,7 +422,6 @@ final class Zibro_Cart_Discount_Bar {
 
 		/* Mobile View Optimization (< 768px) for Position 3 & Cart Layout */
 		@media only screen and (max-width: 767px) {
-			/* Eliminate wasted header & title whitespace on mobile cart */
 			.woocommerce-cart .header { margin-bottom: 6px !important; }
 			.woocommerce-cart .header .header-logo-row { padding: 8px 0 !important; }
 			.woocommerce-cart .vc_custom_1755546995861 { margin-bottom: 6px !important; }
@@ -316,7 +431,6 @@ final class Zibro_Cart_Discount_Bar {
 				line-height: 1.2 !important;
 				margin: 2px 0 8px 0 !important;
 			}
-			/* Position 3 Mobile Bar: Sleek, full width above cart item card */
 			.zibro-cdb-cart { margin: 0 0 10px 0 !important; }
 			.zibro-cdb-box {
 				padding: 10px 12px !important;
@@ -335,7 +449,6 @@ final class Zibro_Cart_Discount_Bar {
 				height: 24px !important;
 				min-width: 24px !important;
 			}
-			/* Clean Mobile Cart Table Card (harmonized with Position 3 bar) */
 			.woocommerce-cart .thb-cart-column .shop_table.cart {
 				background: #f7f8fa !important;
 				border: 1px solid #e5e7eb !important;
@@ -432,7 +545,7 @@ final class Zibro_Cart_Discount_Bar {
 			[
 				'title' => __( 'Zibro Progressbar-Störer (v' . ZIBRO_CDB_VERSION . ')', 'zibro-cart-discount-bar' ),
 				'type'  => 'title',
-				'desc'  => __( 'Progressbar in Position 3 (direkt über der Warenkorb-Tabelle) zur Visualisierung des 400 € Schwellenwerts (Gutschein: blackweek26).', 'zibro-cart-discount-bar' ),
+				'desc'  => __( 'Progressbar in Position 3 (direkt über der Warenkorb-Tabelle) inkl. automatischer Hinterlegung des WooCommerce-Gutscheins blackweek26 ab 400 €.', 'zibro-cart-discount-bar' ),
 				'id'    => 'zibro_cdb_section_title',
 			],
 			[
@@ -441,6 +554,20 @@ final class Zibro_Cart_Discount_Bar {
 				'type'    => 'checkbox',
 				'default' => 'yes',
 				'desc'    => __( 'Fortschrittsbalken im Warenkorb anzeigen', 'zibro-cart-discount-bar' ),
+			],
+			[
+				'title'   => __( 'Gutschein automatisch anwenden', 'zibro-cart-discount-bar' ),
+				'id'      => 'zibro_cdb_auto_apply',
+				'type'    => 'checkbox',
+				'default' => 'yes',
+				'desc'    => __( 'Den unten eingetragenen WooCommerce-Gutschein (z. B. blackweek26) ab Erreichen des Schwellenwerts automatisch im Warenkorb hinterlegen (und unter 400 € wieder entfernen)', 'zibro-cart-discount-bar' ),
+			],
+			[
+				'title'   => __( 'Gutscheincode', 'zibro-cart-discount-bar' ),
+				'id'      => 'zibro_cdb_coupon_code',
+				'type'    => 'text',
+				'default' => 'blackweek26',
+				'desc'    => __( 'Name des in WooCommerce unter Marketing → Gutscheine angelegten Gutscheins (Standard: blackweek26).', 'zibro-cart-discount-bar' ),
 			],
 			[
 				'title'   => __( 'Platzierung', 'zibro-cart-discount-bar' ),
@@ -466,13 +593,6 @@ final class Zibro_Cart_Discount_Bar {
 				'type'              => 'number',
 				'default'           => '10',
 				'custom_attributes' => [ 'step' => '0.5', 'min' => '1', 'max' => '90' ],
-			],
-			[
-				'title'   => __( 'Gutscheincode (für Textanzeige)', 'zibro-cart-discount-bar' ),
-				'id'      => 'zibro_cdb_coupon_code',
-				'type'    => 'text',
-				'default' => 'blackweek26',
-				'desc'    => __( 'Wird im Platzhalter {coupon} ausgegeben (Gutscheineinlösung erfolgt direkt durch WooCommerce).', 'zibro-cart-discount-bar' ),
 			],
 			[
 				'title'   => __( 'Im Header Mini-Cart anzeigen', 'zibro-cart-discount-bar' ),

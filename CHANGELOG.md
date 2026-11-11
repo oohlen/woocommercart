@@ -2,6 +2,13 @@
 
 Alle Änderungen durch Prompts werden fortlaufend mit einer eindeutigen Unterversion dokumentiert.
 
+## [v0.5.0] – 2026-11-11
+### Behoben & Hinzugefügt
+- **Automatische Hinterlegung des WooCommerce-Gutscheins `blackweek26` ab 400 € wieder aktiviert**:
+  - Standard-WooCommerce löst unter *Marketing → Gutscheine* angelegte Gutscheine nicht von selbst ein, solange sie nicht aktiv per Code dem Warenkorb hinzugefügt werden.
+  - [`Zibro_Cart_Discount_Bar::sync_auto_coupon_before_totals()`](file:///Users/oleohlen/zibro-warenkorb/zibro-cart-discount-bar.php#L82-L112) und [`Zibro_Cart_Discount_Bar::sync_auto_coupon()`](file:///Users/oleohlen/zibro-warenkorb/zibro-cart-discount-bar.php#L118-L162) prüfen bei jedem Seitenaufruf (`wp`) sowie bei jedem AJAX-Warenkorb-Update (`simple-cart-update.js`) den Brutto-Warenwert und hinterlegen ab `400 €` automatisch den WooCommerce-Gutschein **`blackweek26`** (`$cart->apply_coupon('blackweek26')`). Fällt der Warenwert unter `400 €`, wird er automatisch wieder entfernt.
+  - Neues Backend-Einstellungsfeld *„Gutschein automatisch anwenden“* (`zibro_cdb_auto_apply`, Standard: `ja`).
+
 ## [v0.4.2] – 2026-11-10
 ### Dokumentation & GitHub-Repository
 - **Umfassende Dokumentation ([`README.md`](file:///Users/oleohlen/zibro-warenkorb/README.md)) hinzugefügt**:

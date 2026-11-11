@@ -1,10 +1,10 @@
-# Zibro Warenkorb Rabatt-Störer (Progress Bar) – `v0.4.2`
+# Zibro Warenkorb Rabatt-Störer (Progress Bar) – `v0.5.0`
 
-Minimalistisches WordPress / WooCommerce Plugin zur Anzeige eines verkaufsfördernden Fortschrittsbalkens (Progress Bar) im Stil von Shopify/Neosupps für **zibro-ofenshop.de** (PeakShops Theme).
+Minimalistisches WordPress / WooCommerce Plugin zur Anzeige eines verkaufsfördernden Fortschrittsbalkens (Progress Bar) im Stil von Shopify/Neosupps inkl. automatischer Hinterlegung des WooCommerce-Gutscheins **`blackweek26`** ab 400 € für **zibro-ofenshop.de** (PeakShops Theme).
 
-- **Aktuelle Version:** `v0.4.2` (siehe [`CHANGELOG.md`](./CHANGELOG.md))
+- **Aktuelle Version:** `v0.5.0` (siehe [`CHANGELOG.md`](./CHANGELOG.md))
 - **Hauptdatei:** [`zibro-cart-discount-bar.php`](./zibro-cart-discount-bar.php)
-- **Installationsfertiges ZIP-Paket:** [`zibro-cart-discount-bar-v0.4.2.zip`](./zibro-cart-discount-bar-v0.4.2.zip)
+- **Installationsfertiges ZIP-Paket:** [`zibro-cart-discount-bar-v0.5.0.zip`](./zibro-cart-discount-bar-v0.5.0.zip)
 
 ---
 
@@ -33,11 +33,11 @@ Minimalistisches WordPress / WooCommerce Plugin zur Anzeige eines verkaufsförde
 
 ---
 
-## Installation in WordPress
+## Installation / Update in WordPress
 
-1. Lade die Datei **[`zibro-cart-discount-bar-v0.4.2.zip`](./zibro-cart-discount-bar-v0.4.2.zip)** aus diesem Repository herunter.
+1. Lade die Datei **[`zibro-cart-discount-bar-v0.5.0.zip`](./zibro-cart-discount-bar-v0.5.0.zip)** aus diesem Repository herunter.
 2. Öffne im WordPress-Backend **Plugins → Neues Plugin hinzufügen → Plugin hochladen**.
-3. Wähle `zibro-cart-discount-bar-v0.4.2.zip` aus, klicke auf **Jetzt installieren** und anschließend auf **Plugin aktivieren**.
+3. Wähle `zibro-cart-discount-bar-v0.5.0.zip` aus, klicke auf **Jetzt installieren** (bzw. **Aktuelles durch hochgeladenes ersetzen**) und anschließend auf **Plugin aktivieren**.
 4. *(Optional)* Einstellungen prüfen unter **WooCommerce → Einstellungen → Warenkorb-Störer (10%)**.
 
 ---
@@ -61,6 +61,7 @@ Im Ordner [`preview/`](./preview/) befindet sich eine interaktive Testumgebung b
 ## Versionshistorie
 
 Alle Änderungen werden fortlaufend mit eindeutiger Unterversion in der [`CHANGELOG.md`](./CHANGELOG.md) dokumentiert:
+- **`v0.5.0`** – Automatische Hinterlegung & Entfernung des WooCommerce-Gutscheins `blackweek26` ab 400 € (inkl. AJAX-Mengenupdate-Support für `simple-cart-update.js`)
 - **`v0.4.2`** – Dokumentation (`README.md`) & GitHub-Repository-Release
 - **`v0.4.1`** – Installationsfertiges WordPress-ZIP-Paket
 - **`v0.4.0`** – Festlegung auf Position 3 (`cart_column`) & Mobile-View-Feinschliff inkl. echtem `390px` Viewport-Testframe
